@@ -5,14 +5,15 @@ pipeline {
 
         stage('Clone Repo') {
             steps {
-                git 'https://github.com/tamanna-bits/aceest-fitness-gym-devops'
+                git branch: 'development', url: 'https://github.com/tamanna-bits/aceest-fitness-gym-devops.git'
             }
         }
-        
+
         stage('Install Dependencies') {
             steps {
                 sh '''
-                pip install poetry
+                python3 -m pip install --upgrade pip
+                python3 -m pip install poetry
                 poetry config virtualenvs.create false
                 poetry install --no-interaction --no-ansi --no-root
                 '''
@@ -30,5 +31,6 @@ pipeline {
                 sh 'docker build -t aceest-fitness-gym-devops .'
             }
         }
+
     }
 }
