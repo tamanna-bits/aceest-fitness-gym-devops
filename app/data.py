@@ -1,0 +1,4 @@
+members = []
+trainers = []
+classes = []
+payments = []
