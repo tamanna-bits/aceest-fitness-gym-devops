@@ -5,6 +5,7 @@ pipeline {
 
         stage('Clone Repo') {
             steps {
+                git branch: 'development',
                 git 'https://github.com/tamanna-bits/aceest-fitness-gym-devops'
             }
         }
