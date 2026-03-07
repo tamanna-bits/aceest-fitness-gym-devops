@@ -14,21 +14,21 @@ pipeline {
                 sh '''
                 python3 -m pip install --upgrade pip
                 python3 -m pip install poetry
-                python3 -m poetry config virtualenvs.create false
-                python3 -m poetry install --no-interaction --no-ansi --no-root
+                poetry config virtualenvs.create false
+                poetry install --no-interaction --no-ansi --no-root
                 '''
             }
         }
 
         stage('Run Tests') {
             steps {
-                sh 'python3 -m poetry run pytest'
+                sh 'poetry run pytest -v'
             }
         }
 
         stage('Build Docker Image') {
             steps {
-                sh 'docker build -t aceest-fitness-gym-devops .'
+                sh 'docker build -t aceest-fitness-gym-devops:latest .'
             }
         }
 
