@@ -22,13 +22,13 @@ pipeline {
 
         stage('Run Tests') {
             steps {
-                sh 'pytest'
+                sh 'python3 -m poetry run pytest'
             }
         }
 
         stage('Build Docker Image') {
             steps {
-                sh 'docker build -t aceest-fitness-gym-devops .'
+                sh 'python3 -m docker build -t aceest-fitness-gym-devops .'
             }
         }
 
