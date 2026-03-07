@@ -18,14 +18,18 @@ jobs:
       with:
         python-version: 3.11
 
-    - name: Install Dependencies
+    - name: Install Poetry
       run: |
-        pip install -r requirements.txt
+        pip install poetry
+
+    - name: Install dependencies
+      run: |
+        poetry install --no-interaction --no-root
 
     - name: Run Tests
       run: |
-        pytest
+        poetry run pytest
 
     - name: Build Docker Image
       run: |
-        docker build -t aceest-gym .
+        docker build -t aceest-fitness-gym-devops .

@@ -28,7 +28,7 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                sh 'python3 -m docker build -t aceest-fitness-gym-devops .'
+                sh 'docker build -t aceest-fitness-gym-devops .'
             }
         }
 
