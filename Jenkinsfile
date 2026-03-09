@@ -1,10 +1,5 @@
 pipeline {
-    agent {
-        docker {
-            image 'python:3.11'
-            args '-u root:root'
-        }
-    }
+    agent any
 
     stages {
 
@@ -14,38 +9,29 @@ pipeline {
             }
         }
 
-        stage('Install Poetry') {
+        stage('Install Dependencies & Run Tests (Docker)') {
             steps {
                 sh '''
-                curl -sSL https://install.python-poetry.org | python3 -
-                export PATH="$HOME/.local/bin:$PATH"
-                poetry --version
-                '''
-            }
-        }
-
-        stage('Install Dependencies') {
-            steps {
-                sh '''
-                export PATH="$HOME/.local/bin:$PATH"
-                poetry config virtualenvs.create false
-                poetry install --no-interaction --no-ansi --no-root
-                '''
-            }
-        }
-
-        stage('Run Tests') {
-            steps {
-                sh '''
-                export PATH="$HOME/.local/bin:$PATH"
+                docker run --rm \
+                -v $PWD:/app \
+                -w /app \
+                python:3.11 \
+                bash -c "
+                pip install poetry &&
+                export PATH=\\$HOME/.local/bin:\\$PATH &&
+                poetry config virtualenvs.create false &&
+                poetry install --no-interaction --no-ansi --no-root &&
                 poetry run pytest -v
+                "
                 '''
             }
         }
 
         stage('Build Docker Image') {
             steps {
-                sh 'docker build -t aceest-fitness-gym-devops:latest .'
+                sh '''
+                docker build -t aceest-fitness-gym-devops:latest .
+                '''
             }
         }
 
