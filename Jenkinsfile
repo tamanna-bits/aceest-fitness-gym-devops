@@ -1,28 +1,45 @@
 pipeline {
-    agent any
+    agent {
+        docker {
+            image 'python:3.11'
+            args '-u root:root'
+        }
+    }
 
     stages {
 
-        stage('Clone Repo') {
+        stage('Checkout') {
             steps {
-                git branch: 'development', url: 'https://github.com/tamanna-bits/aceest-fitness-gym-devops.git'
+                checkout scm
+            }
+        }
+
+        stage('Install Poetry') {
+            steps {
+                sh '''
+                curl -sSL https://install.python-poetry.org | python3 -
+                export PATH="$HOME/.local/bin:$PATH"
+                poetry --version
+                '''
             }
         }
 
         stage('Install Dependencies') {
             steps {
                 sh '''
-                python3 -m pip install --upgrade pip
-                python3 -m pip install poetry
-                python3 -m poetry config virtualenvs.create false
-                python3 -m poetry install --no-interaction --no-ansi --no-root
+                export PATH="$HOME/.local/bin:$PATH"
+                poetry config virtualenvs.create false
+                poetry install --no-interaction --no-ansi --no-root
                 '''
             }
         }
 
         stage('Run Tests') {
             steps {
-                sh 'poetry run pytest -v'
+                sh '''
+                export PATH="$HOME/.local/bin:$PATH"
+                poetry run pytest -v
+                '''
             }
         }
 
@@ -32,5 +49,17 @@ pipeline {
             }
         }
 
+    }
+
+    post {
+        success {
+            echo 'Build Successful ✅'
+        }
+        failure {
+            echo 'Build Failed ❌'
+        }
+        always {
+            echo 'Pipeline Finished'
+        }
     }
 }
