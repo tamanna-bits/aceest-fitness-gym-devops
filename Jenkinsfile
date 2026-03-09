@@ -14,8 +14,8 @@ pipeline {
                 sh '''
                 python3 -m pip install --upgrade pip
                 python3 -m pip install poetry
-                poetry config virtualenvs.create false
-                poetry install --no-interaction --no-ansi --no-root
+                python3 -m poetry config virtualenvs.create false
+                python3 -m poetry install --no-interaction --no-ansi --no-root
                 '''
             }
         }
