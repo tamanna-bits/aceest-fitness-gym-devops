@@ -9,14 +9,14 @@ This project demonstrates a **CI/CD-ready Python service** using **Poetry, Docke
 
 The API allows:
 
-* Checking service status
-* Adding gym members
-* Fetching all registered members
+- Checking service status
+- Adding gym members
+- Fetching all registered members
 
 Example endpoints:
 
-| Method | Endpoint     | Description          |
-| ------ | ------------ | -------------------- |
+| Method | Endpoint   | Description          |
+| ------ | ---------- | -------------------- |
 | GET    | `/`        | Health check         |
 | POST   | `/members` | Add a new member     |
 | GET    | `/members` | Retrieve all members |
@@ -25,13 +25,13 @@ Example endpoints:
 
 # Tech Stack
 
-* Python 3.11
-* Flask
-* Poetry (Dependency Management)
-* Pytest (Testing)
-* Docker
-* Jenkins (CI pipeline)
-* GitHub Actions (CI integration)
+- Python 3.11
+- Flask
+- Poetry (Dependency Management)
+- Pytest (Testing)
+- Docker
+- Jenkins (CI pipeline)
+- GitHub Actions (CI integration)
 
 ---
 
@@ -145,7 +145,7 @@ curl http://localhost:5000/members
 
 # Running Tests Manually
 
-Tests are written using  **Pytest** .
+Tests are written using **Pytest** .
 
 Run tests locally:
 
@@ -204,7 +204,7 @@ checkout scm
 
 ### 2. Install Dependencies & Run Tests (Docker)
 
-Runs tests inside a  **Python 3.11 Docker container** .
+Runs tests inside a **Python 3.11 Docker container** .
 
 Steps:
 
@@ -220,9 +220,9 @@ poetry run pytest -v
 
 This ensures:
 
-* Clean environment
-* Consistent builds
-* Dependency isolation
+- Clean environment
+- Consistent builds
+- Dependency isolation
 
 ---
 
@@ -264,7 +264,7 @@ Pipeline Success / Failure
 
 # GitHub Actions Integration (Concept)
 
-A similar CI process can run using  **GitHub Actions** .
+A similar CI process can run using **GitHub Actions** .
 
 Typical workflow:
 
@@ -296,20 +296,20 @@ Example steps:
 
 This setup provides:
 
-* Automated testing
-* Consistent build environment
-* Faster feedback for developers
-* Dockerized deployment ready for cloud
+- Automated testing
+- Consistent build environment
+- Faster feedback for developers
+- Dockerized deployment ready for cloud
 
 ---
 
 # Future Improvements
 
-* Add database (PostgreSQL / MongoDB)
-* Implement authentication
-* Add member update & delete endpoints
-* Deploy using Kubernetes or AWS ECS
-* Add code coverage reporting
+- Add database (PostgreSQL / MongoDB)
+- Implement authentication
+- Add member update & delete endpoints
+- Deploy using Kubernetes or AWS ECS
+- Add code coverage reporting
 
 ---
 
