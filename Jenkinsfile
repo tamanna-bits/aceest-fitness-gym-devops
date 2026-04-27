@@ -2,12 +2,12 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_HUB_REPO    = "${env.DOCKERHUB_USER}/${env.DOCKERHUB_REPO}"
+        DOCKER_HUB_REPO    = "tamannabits/aceest-fitness-gym-devops"
         SONAR_HOST_URL     = "${env.SONAR_HOST}"
         KUBE_NAMESPACE     = "${env.KUBE_NS}"
         KUBECONFIG         = "${env.KUBE_CONFIG}"
 
-        DOCKER_CREDENTIALS = "dockerhub-creds"
+        DOCKER_CREDENTIALS = "${env.DOCKER_CREDENTIALS}"
         SONAR_TOKEN        = credentials("sonar-token")
 
         IMAGE_TAG          = "${env.BUILD_NUMBER}"
@@ -101,7 +101,7 @@ pipeline {
         stage("Push to Docker Hub") {
             steps {
                 withCredentials([usernamePassword(
-                    credentialsId: "${env.DOCKER_CREDENTIALS}",
+                    credentialsId: "dockerhub-creds",
                     usernameVariable: "DOCKER_USER",
                     passwordVariable: "DOCKER_PASS"
                 )]) {
