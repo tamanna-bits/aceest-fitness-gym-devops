@@ -1,0 +1,77 @@
+# ══════════════════════════════════════════════════════
+#  BLUE-GREEN DEPLOYMENT
+#  Two identical environments (blue=stable, green=new)
+#  Switch traffic by updating the Service selector
+# ══════════════════════════════════════════════════════
+
+# ── BLUE (currently live / stable) ───────────────────
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aceest-blue
+  namespace: aceest
+  labels:
+    app: aceest
+    slot: blue
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: aceest
+      slot: blue
+  template:
+    metadata:
+      labels:
+        app: aceest
+        slot: blue
+    spec:
+      containers:
+        - name: aceest
+          image: yourdockerhubuser/aceest-fitness:stable
+          ports:
+            - containerPort: 5000
+---
+# ── GREEN (new version – under test) ─────────────────
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aceest-green
+  namespace: aceest
+  labels:
+    app: aceest
+    slot: green
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: aceest
+      slot: green
+  template:
+    metadata:
+      labels:
+        app: aceest
+        slot: green
+    spec:
+      containers:
+        - name: aceest
+          image: yourdockerhubuser/aceest-fitness:new
+          ports:
+            - containerPort: 5000
+---
+# ── Service (switch selector to change active slot) ───
+# To go live with GREEN:  kubectl patch svc aceest-bg-service
+#   -p '{"spec":{"selector":{"slot":"green"}}}' -n aceest
+apiVersion: v1
+kind: Service
+metadata:
+  name: aceest-bg-service
+  namespace: aceest
+spec:
+  selector:
+    app: aceest
+    slot: blue          # <── change to "green" to cut over
+  type: NodePort
+  ports:
+    - port: 80
+      targetPort: 5000
+      nodePort: 30081
