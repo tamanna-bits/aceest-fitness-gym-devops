@@ -1,25 +1,21 @@
-// ═══════════════════════════════════════════════════════════════════════════
-//  ACEest Fitness & Gym – Jenkinsfile
-//  Stages: Checkout → Test → SonarQube → Build Image → Push → Deploy
-//  Supports: Docker (default) and Podman (set BUILD_TOOL=podman)
-// ═══════════════════════════════════════════════════════════════════════════
-
 pipeline {
     agent any
 
     environment {
-        DOCKER_HUB_REPO   = "yourdockerhubuser/aceest-fitness"
-        DOCKER_CREDENTIALS = "dockerhub-creds"          // Jenkins credential ID
-        SONAR_HOST_URL    = "http://sonarqube:9000"
-        SONAR_TOKEN       = credentials("sonar-token")  // Jenkins credential ID
-        IMAGE_TAG         = "${env.BUILD_NUMBER}"
-        KUBE_NAMESPACE    = "aceest"
-        // Set to "podman" on agents where Docker is unavailable
-        BUILD_TOOL        = "${env.BUILD_TOOL ?: 'docker'}"
+        DOCKER_HUB_REPO    = "${env.DOCKERHUB_USER}/${env.DOCKERHUB_REPO}"
+        SONAR_HOST_URL     = "${env.SONAR_HOST}"
+        KUBE_NAMESPACE     = "${env.KUBE_NS}"
+        KUBECONFIG         = "${env.KUBE_CONFIG}"
+
+        DOCKER_CREDENTIALS = credentials("dockerhub-creds")
+        SONAR_TOKEN        = credentials("sonar-token")
+
+        IMAGE_TAG          = "${env.BUILD_NUMBER}"
+        BUILD_TOOL         = "${env.BUILD_TOOL ?: 'docker'}"
     }
 
     triggers {
-        pollSCM("H/2 * * * *")
+        githubPush()
     }
 
     options {
@@ -35,7 +31,8 @@ pipeline {
             steps {
                 checkout scm
                 echo "Branch: ${env.GIT_BRANCH}  |  Commit: ${env.GIT_COMMIT}"
-                echo "Build tool: ${BUILD_TOOL}"
+                echo "Build tool: ${env.BUILD_TOOL}"
+                echo "Image: ${env.DOCKER_HUB_REPO}:${env.IMAGE_TAG}"
             }
         }
 
@@ -43,8 +40,10 @@ pipeline {
         stage("Unit Tests") {
             steps {
                 sh """
+                    python3 -m venv venv
+                    . venv/bin/activate
                     pip install --no-cache-dir -r requirements.txt
-                    python -m pytest tests/ -v \
+                    pytest tests/ -v \
                         --junitxml=reports/junit.xml \
                         --cov=app \
                         --cov-report=xml:reports/coverage.xml \
@@ -68,8 +67,8 @@ pipeline {
                           -Dsonar.sources=app \
                           -Dsonar.tests=tests \
                           -Dsonar.python.coverage.reportPaths=reports/coverage.xml \
-                          -Dsonar.host.url=${SONAR_HOST_URL} \
-                          -Dsonar.login=${SONAR_TOKEN}
+                          -Dsonar.host.url=${env.SONAR_HOST_URL} \
+                          -Dsonar.login=${env.SONAR_TOKEN}
                     """
                 }
             }
@@ -84,55 +83,39 @@ pipeline {
             }
         }
 
-        // ── 5. BUILD IMAGE (Docker or Podman) ────────────────────────────────
+        // ── 5. BUILD IMAGE ───────────────────────────────────────────────────
         stage("Build Image") {
             steps {
                 script {
-                    if (env.BUILD_TOOL == "podman") {
-                        sh """
-                            podman build \
-                                --target production \
-                                -t ${DOCKER_HUB_REPO}:${IMAGE_TAG} \
-                                -t ${DOCKER_HUB_REPO}:latest \
-                                .
-                        """
-                    } else {
-                        sh """
-                            docker build \
-                                --target production \
-                                -t ${DOCKER_HUB_REPO}:${IMAGE_TAG} \
-                                -t ${DOCKER_HUB_REPO}:latest \
-                                .
-                        """
-                    }
+                    def buildCmd = env.BUILD_TOOL == "podman" ? "podman" : "docker"
+                    sh """
+                        ${buildCmd} build \
+                            --target production \
+                            -t ${env.DOCKER_HUB_REPO}:${env.IMAGE_TAG} \
+                            -t ${env.DOCKER_HUB_REPO}:latest \
+                            .
+                    """
                 }
             }
         }
 
-        // ── 6. PUSH TO DOCKER HUB (Docker or Podman) ─────────────────────────
+        // ── 6. PUSH TO DOCKER HUB ────────────────────────────────────────────
         stage("Push to Docker Hub") {
             steps {
                 withCredentials([usernamePassword(
-                    credentialsId: "${DOCKER_CREDENTIALS}",
+                    credentialsId: "${env.DOCKER_CREDENTIALS}",
                     usernameVariable: "DOCKER_USER",
                     passwordVariable: "DOCKER_PASS"
                 )]) {
                     script {
-                        if (env.BUILD_TOOL == "podman") {
-                            sh """
-                                echo ${DOCKER_PASS} | podman login docker.io -u ${DOCKER_USER} --password-stdin
-                                podman push ${DOCKER_HUB_REPO}:${IMAGE_TAG}
-                                podman push ${DOCKER_HUB_REPO}:latest
-                                podman logout docker.io
-                            """
-                        } else {
-                            sh """
-                                echo ${DOCKER_PASS} | docker login -u ${DOCKER_USER} --password-stdin
-                                docker push ${DOCKER_HUB_REPO}:${IMAGE_TAG}
-                                docker push ${DOCKER_HUB_REPO}:latest
-                                docker logout
-                            """
-                        }
+                        def buildCmd = env.BUILD_TOOL == "podman" ? "podman" : "docker"
+                        def registry = env.BUILD_TOOL == "podman" ? "docker.io" : ""
+                        sh """
+                            echo ${DOCKER_PASS} | ${buildCmd} login ${registry} -u ${DOCKER_USER} --password-stdin
+                            ${buildCmd} push ${env.DOCKER_HUB_REPO}:${env.IMAGE_TAG}
+                            ${buildCmd} push ${env.DOCKER_HUB_REPO}:latest
+                            ${buildCmd} logout ${registry}
+                        """
                     }
                 }
             }
@@ -144,11 +127,11 @@ pipeline {
             steps {
                 sh """
                     kubectl set image deployment/aceest-deployment \
-                        aceest=${DOCKER_HUB_REPO}:${IMAGE_TAG} \
-                        -n ${KUBE_NAMESPACE}
+                        aceest=${env.DOCKER_HUB_REPO}:${env.IMAGE_TAG} \
+                        -n ${env.KUBE_NAMESPACE}
 
                     kubectl rollout status deployment/aceest-deployment \
-                        -n ${KUBE_NAMESPACE} \
+                        -n ${env.KUBE_NAMESPACE} \
                         --timeout=120s
                 """
             }
@@ -157,11 +140,11 @@ pipeline {
 
     post {
         success {
-            echo "Pipeline SUCCESS – Image: ${DOCKER_HUB_REPO}:${IMAGE_TAG}"
+            echo "Pipeline SUCCESS – Image: ${env.DOCKER_HUB_REPO}:${env.IMAGE_TAG}"
         }
         failure {
             echo "Pipeline FAILED – Triggering rollback"
-            sh "kubectl rollout undo deployment/aceest-deployment -n ${KUBE_NAMESPACE} || true"
+            sh "kubectl rollout undo deployment/aceest-deployment -n ${env.KUBE_NAMESPACE} || true"
         }
         always {
             cleanWs()
