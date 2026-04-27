@@ -7,7 +7,7 @@ pipeline {
         KUBE_NAMESPACE     = "${env.KUBE_NS}"
         KUBECONFIG         = "${env.KUBE_CONFIG}"
 
-        DOCKER_CREDENTIALS = credentials("dockerhub-creds")
+        DOCKER_CREDENTIALS = "dockerhub-creds"
         SONAR_TOKEN        = credentials("sonar-token")
 
         IMAGE_TAG          = "${env.BUILD_NUMBER}"
@@ -31,19 +31,17 @@ pipeline {
             steps {
                 checkout scm
                 echo "Branch: ${env.GIT_BRANCH}  |  Commit: ${env.GIT_COMMIT}"
-                echo "Build tool: ${env.BUILD_TOOL}"
-                echo "Image: ${env.DOCKER_HUB_REPO}:${env.IMAGE_TAG}"
             }
         }
 
         // ── 2. UNIT TESTS ───────────────────────────────────────────────────
-        stage("Unit Tests") {
+       stage("Unit Tests") {
             steps {
                 sh """
-                    python3 -m venv venv
-                    . venv/bin/activate
-                    pip install --no-cache-dir -r requirements.txt
-                    pytest tests/ -v \
+                    mkdir -p reports
+                    pip install --no-cache-dir poetry
+                    poetry install --no-root
+                    poetry run pytest tests/ -v \
                         --junitxml=reports/junit.xml \
                         --cov=app \
                         --cov-report=xml:reports/coverage.xml \
@@ -123,7 +121,7 @@ pipeline {
 
         // ── 7. DEPLOY (Rolling Update) ────────────────────────────────────────
         stage("Deploy – Rolling Update") {
-            when { branch "main" }
+            when { branch "development" }
             steps {
                 sh """
                     kubectl set image deployment/aceest-deployment \
