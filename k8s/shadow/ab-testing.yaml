@@ -1,0 +1,119 @@
+# ══════════════════════════════════════════════════════
+#  A/B TESTING DEPLOYMENT
+#  Route specific users (by header / cookie) to variant B
+#  Requires NGINX Ingress with canary annotations
+# ══════════════════════════════════════════════════════
+
+# ── Variant A (control) ───────────────────────────────
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aceest-variant-a
+  namespace: aceest
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: aceest
+      variant: a
+  template:
+    metadata:
+      labels:
+        app: aceest
+        variant: a
+    spec:
+      containers:
+        - name: aceest
+          image: yourdockerhubuser/aceest-fitness:stable
+          ports:
+            - containerPort: 5000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: aceest-variant-a-svc
+  namespace: aceest
+spec:
+  selector:
+    app: aceest
+    variant: a
+  ports:
+    - port: 80
+      targetPort: 5000
+---
+# ── Variant B (experiment) ────────────────────────────
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aceest-variant-b
+  namespace: aceest
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: aceest
+      variant: b
+  template:
+    metadata:
+      labels:
+        app: aceest
+        variant: b
+    spec:
+      containers:
+        - name: aceest
+          image: yourdockerhubuser/aceest-fitness:experiment
+          ports:
+            - containerPort: 5000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: aceest-variant-b-svc
+  namespace: aceest
+spec:
+  selector:
+    app: aceest
+    variant: b
+  ports:
+    - port: 80
+      targetPort: 5000
+---
+# ── Ingress: route users with header X-Variant: b → variant B ─
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: aceest-ab-ingress-b
+  namespace: aceest
+  annotations:
+    nginx.ingress.kubernetes.io/canary: "true"
+    nginx.ingress.kubernetes.io/canary-by-header: "X-Variant"
+    nginx.ingress.kubernetes.io/canary-by-header-value: "b"
+spec:
+  rules:
+    - http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: aceest-variant-b-svc
+                port:
+                  number: 80
+---
+# ── Main Ingress → Variant A ──────────────────────────
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: aceest-ab-ingress-a
+  namespace: aceest
+spec:
+  rules:
+    - http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: aceest-variant-a-svc
+                port:
+                  number: 80

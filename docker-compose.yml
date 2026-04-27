@@ -1,0 +1,60 @@
+version: "3.9"
+
+services:
+  # ── ACEest Flask App ────────────────────────────────────────────────────
+  aceest-app:
+    build:
+      context: .
+      target: production
+    image: aceest-fitness:latest
+    container_name: aceest-app
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_ENV=production
+    networks:
+      - aceest-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ── Jenkins CI ──────────────────────────────────────────────────────────
+  jenkins:
+    image: jenkins/jenkins:lts
+    container_name: aceest-jenkins
+    ports:
+      - "8080:8080"
+      - "50000:50000"
+    volumes:
+      - jenkins_home:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - aceest-net
+    restart: unless-stopped
+
+  # ── SonarQube ───────────────────────────────────────────────────────────
+  sonarqube:
+    image: sonarqube:community
+    container_name: aceest-sonar
+    ports:
+      - "9000:9000"
+    environment:
+      - SONAR_ES_BOOTSTRAP_CHECKS_DISABLE=true
+    volumes:
+      - sonar_data:/opt/sonarqube/data
+      - sonar_logs:/opt/sonarqube/logs
+    networks:
+      - aceest-net
+    restart: unless-stopped
+
+volumes:
+  jenkins_home:
+  sonar_data:
+  sonar_logs:
+
+networks:
+  aceest-net:
+    driver: bridge
