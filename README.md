@@ -315,4 +315,4 @@ This setup provides:
 
 # Author
 
-Tamanna Bindra BITS_ID (2022us70002)
+Tamanna Bindra (2022us70002)
