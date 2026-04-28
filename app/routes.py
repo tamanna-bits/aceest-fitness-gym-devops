@@ -136,7 +136,7 @@ def get_available_programs(membership: str) -> dict:
         if membership in details["allowed_memberships"]
     }
 
-
+# ── Calories Calculator ─────────────────────────────────────────────────────────────
 @gym_routes.route("/programs/<program_name>/calories", methods=["GET"])
 def calc_calories(program_name):
     weight = request.args.get("weight", type=float)
