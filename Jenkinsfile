@@ -7,7 +7,6 @@ pipeline {
         KUBE_NAMESPACE     = "${env.KUBE_NS}"
         KUBECONFIG         = "${env.KUBE_CONFIG}"
 
-        DOCKER_CREDENTIALS = "${env.DOCKER_CREDENTIALS}"
         SONAR_TOKEN        = credentials("sonar-token")
 
         IMAGE_TAG          = "${env.BUILD_NUMBER}"
@@ -28,32 +27,42 @@ pipeline {
 
         // ── 1. CHECKOUT ─────────────────────────────────────────────────────
         stage("Checkout") {
-            steps {
-                checkout scm
-                echo "Branch: ${env.GIT_BRANCH}  |  Commit: ${env.GIT_COMMIT}"
-            }
-        }
+    steps {
+        // Option A: Clone your repo manually
+        git branch: 'development',
+            url: 'https://github.com/tamanna-bits/aceest-fitness-gym-devops/'
+        
+        echo "Branch: ${env.GIT_BRANCH}  |  Commit: ${env.GIT_COMMIT}"
+    }
+}
 
-        // ── 2. UNIT TESTS ───────────────────────────────────────────────────
        stage("Unit Tests") {
-            steps {
-                sh """
-                    mkdir -p reports
-                    pip install --no-cache-dir poetry
-                    poetry install --no-root
+    steps {
+        sh '''
+            mkdir -p reports
+            docker run --rm \
+                -v $PWD:/app \
+                -w /app \
+                python:3.11 \
+                bash -c "
+                    pip install poetry &&
+                    poetry config virtualenvs.create false &&
+                    poetry install --no-interaction --no-ansi --no-root &&
+                    pip install pytest-cov &&
                     poetry run pytest tests/ -v \
                         --junitxml=reports/junit.xml \
                         --cov=app \
                         --cov-report=xml:reports/coverage.xml \
                         --cov-report=term-missing
-                """
-            }
-            post {
-                always {
-                    junit "reports/junit.xml"
-                }
-            }
+                "
+        '''
+    }
+    post {
+        always {
+            junit "reports/junit.xml"
         }
+    }
+}
 
         // ── 3. SONARQUBE ANALYSIS ────────────────────────────────────────────
         stage("SonarQube Analysis") {
@@ -75,7 +84,7 @@ pipeline {
         // ── 4. QUALITY GATE ──────────────────────────────────────────────────
         stage("Quality Gate") {
             steps {
-                timeout(time: 5, unit: "MINUTES") {
+                timeout(time: 2, unit: "MINUTES") {
                     waitForQualityGate abortPipeline: true
                 }
             }
@@ -109,7 +118,7 @@ pipeline {
                         def buildCmd = env.BUILD_TOOL == "podman" ? "podman" : "docker"
                         def registry = env.BUILD_TOOL == "podman" ? "docker.io" : ""
                         sh """
-                            echo ${DOCKER_PASS} | ${buildCmd} login ${registry} -u ${DOCKER_USER} --password-stdin
+                            echo \$DOCKER_PASS | ${buildCmd} login ${registry} -u \$DOCKER_USER --password-stdin
                             ${buildCmd} push ${env.DOCKER_HUB_REPO}:${env.IMAGE_TAG}
                             ${buildCmd} push ${env.DOCKER_HUB_REPO}:latest
                             ${buildCmd} logout ${registry}
@@ -123,15 +132,17 @@ pipeline {
         stage("Deploy – Rolling Update") {
             when { branch "development" }
             steps {
-                sh """
-                    kubectl set image deployment/aceest-deployment \
-                        aceest=${env.DOCKER_HUB_REPO}:${env.IMAGE_TAG} \
-                        -n ${env.KUBE_NAMESPACE}
+                withCredentials([file(credentialsId: "kubeconfig-file", variable: "KUBECONFIG")]) {
+                    sh """
+                        kubectl set image deployment/aceest-deployment \
+                            aceest=${env.DOCKER_HUB_REPO}:${env.IMAGE_TAG} \
+                            -n ${env.KUBE_NAMESPACE}
 
-                    kubectl rollout status deployment/aceest-deployment \
-                        -n ${env.KUBE_NAMESPACE} \
-                        --timeout=120s
-                """
+                        kubectl rollout status deployment/aceest-deployment \
+                            -n ${env.KUBE_NAMESPACE} \
+                            --timeout=120s
+                    """
+                }
             }
         }
     }
@@ -142,7 +153,9 @@ pipeline {
         }
         failure {
             echo "Pipeline FAILED – Triggering rollback"
-            sh "kubectl rollout undo deployment/aceest-deployment -n ${env.KUBE_NAMESPACE} || true"
+            withCredentials([file(credentialsId: "kubeconfig-file", variable: "KUBECONFIG")]) {
+                sh "kubectl rollout undo deployment/aceest-deployment -n ${env.KUBE_NAMESPACE} || true"
+            }
         }
         always {
             cleanWs()
