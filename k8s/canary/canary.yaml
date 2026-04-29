@@ -24,7 +24,7 @@ spec:
     spec:
       containers:
         - name: aceest
-          image: yourdockerhubuser/aceest-fitness:stable
+          image: tamannabits/aceest-fitness:stable
           ports:
             - containerPort: 5000
 ---
@@ -48,7 +48,7 @@ spec:
     spec:
       containers:
         - name: aceest
-          image: yourdockerhubuser/aceest-fitness:canary
+          image: tamannabits/aceest-fitness:canary
           ports:
             - containerPort: 5000
 ---
@@ -60,7 +60,7 @@ metadata:
   namespace: aceest
 spec:
   selector:
-    app: aceest          # matches both stable + canary pods
+    app: aceest # matches both stable + canary pods
   type: NodePort
   ports:
     - port: 80
