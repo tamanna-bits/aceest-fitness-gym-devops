@@ -31,7 +31,7 @@ spec:
     spec:
       containers:
         - name: aceest
-          image: yourdockerhubuser/aceest-fitness:latest
+          image: tamannabits/aceest-fitness:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 5000

@@ -27,7 +27,7 @@ spec:
     spec:
       containers:
         - name: aceest
-          image: yourdockerhubuser/aceest-fitness:stable
+          image: tamannabits/aceest-fitness:stable
           ports:
             - containerPort: 5000
 ---
@@ -54,7 +54,7 @@ spec:
     spec:
       containers:
         - name: aceest
-          image: yourdockerhubuser/aceest-fitness:new
+          image: tamannabits/aceest-fitness:new
           ports:
             - containerPort: 5000
 ---
@@ -69,7 +69,7 @@ metadata:
 spec:
   selector:
     app: aceest
-    slot: blue          # <── change to "green" to cut over
+    slot: blue # <── change to "green" to cut over
   type: NodePort
   ports:
     - port: 80

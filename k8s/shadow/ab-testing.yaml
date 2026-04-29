@@ -24,7 +24,7 @@ spec:
     spec:
       containers:
         - name: aceest
-          image: yourdockerhubuser/aceest-fitness:stable
+          image: tamannabits/aceest-fitness:stable
           ports:
             - containerPort: 5000
 ---
@@ -61,7 +61,7 @@ spec:
     spec:
       containers:
         - name: aceest
-          image: yourdockerhubuser/aceest-fitness:experiment
+          image: tamannabits/aceest-fitness:experiment
           ports:
             - containerPort: 5000
 ---
